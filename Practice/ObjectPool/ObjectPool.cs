@@ -2,8 +2,8 @@ using System;
 
 namespace Leleko.CSharp.Patterns
 {
-
-	public abstract class ObjectPool: Singleton
+	/*
+	public abstract class ObjectPool: Multiton
 	{
 		public abstract class PoolableObject: IDisposable
 		{
@@ -27,5 +27,6 @@ namespace Leleko.CSharp.Patterns
 	{
 
 	}
+	*/
 }
 

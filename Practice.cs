@@ -7,7 +7,7 @@ namespace Leleko.CSharp.Patterns
 	[AttributeUsage(AttributeTargets.Method, Inherited = true)]
 	public abstract class CallBaseAttribute: Attribute
 	{
-		public string Remark { get; private set; }
+		public string Remark { get; set; }
 	
 	}
 

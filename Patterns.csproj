@@ -40,7 +40,6 @@
     <Compile Include="Practice\ObjectPool\ObjectPool.cs" />
     <Compile Include="Practice\ISource.cs" />
     <Compile Include="Practice\Singleton\Singleton.cs" />
-    <Compile Include="Practice\Singleton\SingletonSelector.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

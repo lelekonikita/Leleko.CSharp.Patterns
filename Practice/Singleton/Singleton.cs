@@ -151,50 +151,5 @@ namespace Leleko.CSharp.Patterns
 
 
 
-	/*
-	/// <summary>
-	/// Класс синглтона, определяющий пул селектора с доступом по ключу
-	/// </summary>
-	public abstract class Singleton<TSelector> : Singleton
-		where TSelector: Singleton.Selector<TKey>
-	{
-		/// <summary>
-		/// The rule instance
-		/// </summary>
-		public static readonly TSelector Selector = Singleton.Instance<TSelector>.Value;
-
-		static readonly Hashtable InstanceTable = new Hashtable();
-
-		protected override void Initialize()
-		{
-			base.Initialize();
-
-			// регистрируем по ключам
-			var keys = Selector.GetKeys(this);
-			if (keys.Length > 0)
-			{
-				Hashtable instansTable = InstanceTable;
-				lock (instansTable.SyncRoot)
-				{
-					for (int i = 0; i < keys.Length; i++)
-						// Регистрация экземпляра синглтона в таблице
-						instansTable.Add(keys[i], this);
-				}
-			}
-		}
-
-		/// <summary>
-		/// Gets the init keys.
-		/// </summary>
-		/// <value>The init types.</value>
-		public static ICollection InitKeys { get { return InstanceTable.Keys; } } 
-		
-		/// <summary>
-		/// Gets the init objects.
-		/// </summary>
-		/// <value>The init objects.</value>
-		public new static ICollection InitObjects { get { return InstanceTable.Values; } }
-	}
-	*/
 
 }

@@ -3,6 +3,10 @@ using System.Collections;
 
 namespace Leleko.CSharp.Patterns
 {
+	// Пока что в использовании отказано
+
+	/*
+
 	/// <summary>
 	/// Базовый класс потокоизолированного синглтона (один объект на каждый поток)
 	/// </summary>
@@ -78,5 +82,7 @@ namespace Leleko.CSharp.Patterns
 			}
 		}
 	}
+
+	*/
 }
 

@@ -45,8 +45,37 @@ namespace Leleko.CSharp.Patterns
 		/// <param name="singletonType">Single object type.</param>
 		public SingletonInitAttribute(Type singletonType)
 		{
+			if (singletonType == null)
+				throw new ArgumentNullException("singletonType");
+
 			// Инициализируем синглтон
 			Singleton.GetInstance(singletonType);
+		}
+	}
+
+	/// <summary>
+	/// Задает синглтону ассоциированный атрибут
+	/// </summary>
+	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+	public sealed class SingletonAssociationAttribute: Attribute
+	{
+		/// <summary>
+		/// Тип интерфейса с которым будет ассоциирован инстанс
+		/// </summary>
+		/// <value>The type of the class.</value>
+		public Type ClassType { get; private set; }
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="Leleko.CSharp.Patterns.SingletonAssociationAttribute"/> class.
+		/// </summary>
+		/// <param name="classType">Тип класса</param>
+		public SingletonAssociationAttribute(Type classType)
+		{
+			if (classType == null)
+				throw new ArgumentNullException("classType");
+
+			// Тип ассоциируемого класса
+			this.ClassType = classType;
 		}
 	}
 	
@@ -54,7 +83,7 @@ namespace Leleko.CSharp.Patterns
 	/// Позволяет задавать ключ для SelectorAttribute при инициализации синглтонов
 	/// </summary>
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
-	public class MultitonKeyAttribute: Attribute
+	public sealed class MultitonKeyAttribute: Attribute
 	{
 		public object Key { get; private set; }
 		
@@ -68,7 +97,7 @@ namespace Leleko.CSharp.Patterns
 	/// Тип ресурса синглетона
 	/// </summary>
 	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
-	public class SingletonSourceAttribute: Attribute
+	public sealed class SingletonSourceAttribute: Attribute
 	{
 	}
 

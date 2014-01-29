@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace Leleko.CSharp.Patterns
 {
@@ -15,7 +16,7 @@ namespace Leleko.CSharp.Patterns
         /// Экземпляр синглтона
         /// </summary>
         /// <typeparam name="TSingleton">тип синглтона</typeparam>
-        public abstract class Instance<TSingleton>
+        public static class Instance<TSingleton>
             where TSingleton : Singleton
         {
             /// <summary>
@@ -32,6 +33,16 @@ namespace Leleko.CSharp.Patterns
 				Value = (TSingleton)GetInstance(typeof(TSingleton));
 			}
         }
+
+		/// <summary>
+		/// Ассоциированный синглтон с интерфейсом
+		/// </summary>
+		/// <typeparam name="TInterface">тип интерфейса</typeparam>
+		public static class Association<TClass>
+			where TClass: class
+		{
+			public static Singleton Value { get; internal set; }
+		}
 
 		#region [ Static ]
 
@@ -61,9 +72,6 @@ namespace Leleko.CSharp.Patterns
 				throw new ArgumentException("Запрашиваемый тип должен быть производным от Singleton", singletonType.FullName);
 		}
 
-
-
-        
 		/// <summary>
 		/// Gets the init types.
 		/// </summary>
@@ -77,6 +85,25 @@ namespace Leleko.CSharp.Patterns
 		public static ICollection InitObjects { get { return InstanceTable.Values; } }
 
 		#endregion
+
+		#region [ Association - регистрация ассоциации
+
+		static void RegisterAssociationInternal<TClass>(Singleton singleton)
+			where TClass: class 
+		{
+			Association<TClass>.Value = singleton;
+		}
+
+		static readonly MethodInfo RegisterAssociationInternalMi = typeof(Singleton).GetMethod("RegisterAssociationInternal", BindingFlags.Static | BindingFlags.NonPublic );
+
+		static void RegisterAssociation(Type type, Singleton singleton)
+		{
+			RegisterAssociationInternalMi.MakeGenericMethod(type).Invoke(null, new object[] { singleton });
+		}
+
+		#endregion
+
+
 
 		#region [ Selectors ]
 
@@ -116,6 +143,10 @@ namespace Leleko.CSharp.Patterns
 			this.Initialize();
 		}
 
+		/// <summary>
+		/// Инициализатор
+		/// </summary>
+		/// <remarks></remarks>
 		void Initialize()
 		{
 			Hashtable instansTable = InstanceTable;
@@ -126,6 +157,10 @@ namespace Leleko.CSharp.Patterns
 			}
 			// Инициализация указанных синглтонов
 			Attribute.GetCustomAttributes(this.GetType(), typeof(SingletonInitAttribute));
+			// Инициализация указанных 
+			foreach (SingletonAssociationAttribute attribute in Attribute.GetCustomAttributes(this.GetType(), typeof(SingletonAssociationAttribute)))
+				RegisterAssociation(attribute.ClassType, this);
+
 			// Уведомление селекторов о появлении нового синглтона
 			if (SelectorsAdd != null)
 				SelectorsAdd(this);
@@ -133,6 +168,9 @@ namespace Leleko.CSharp.Patterns
 			this.DoAfterInitialize();
 		}
 
+		/// <summary>
+		/// Постинициализатор
+		/// </summary>
 		protected virtual void DoAfterInitialize()
 		{
 		}

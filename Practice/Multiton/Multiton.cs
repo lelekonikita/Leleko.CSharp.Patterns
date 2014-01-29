@@ -5,68 +5,121 @@ using System.Collections;
 namespace Leleko.CSharp.Patterns
 {
 	/* Паттерн - Multiton */
-	
+
 	/// <summary>
-	/// Класс мультитона, определяющий пул селектора с доступом по ключу
+	/// Multiton (пул одиночек) - объект содержащий в себе (Singleton) с доступом по ключу
 	/// </summary>
-	public abstract class Multiton<TSelector> : Singleton
-		where TSelector: Singleton.Selector
+	public sealed class Multiton<TSelectRule,TSelectable>: Singleton
+		where TSelectRule: Singleton.Rule.SelectRule 
+		where TSelectable: Singleton
 	{
+		#region [ Static ]
+
 		/// <summary>
-		/// The rule instance
+		/// Инстанс себя
 		/// </summary>
-		public static readonly TSelector Selector = Singleton.Instance<TSelector>.Value;
-		
-		static readonly Hashtable InstanceTable = new Hashtable();
-		
-		protected override void Initialize()
+		public static readonly Multiton<TSelectRule, TSelectable> Value;
+
+		/// <summary>
+		/// управляющий правилом добавления синглтонов
+		/// </summary>
+		static readonly TSelectRule SelectRule;
+
+		/// <summary>
+		/// статический конструктор
+		/// </summary>
+		static Multiton()
 		{
-			base.Initialize();
-			
-			// регистрируем по ключам в селекторе
-			var keysEnumerator = Selector.GetKeys(this);
+			SelectRule = Singleton.Instance<TSelectRule>.Value;
+
+			Value = Singleton.Instance<Multiton<TSelectRule,TSelectable>>.Value;
+		}
+
+		#endregion
+
+		#region [ Selected Table - таблица выбранных ]
+
+		/// <summary>
+		/// отобранная таблица
+		/// </summary>
+		protected readonly Hashtable selectingsTable = new Hashtable();
+
+		public ICollection SelectedKeys { get { return this.selectingsTable.Keys; } }
+
+		public ICollection SelectedObjects { get { return this.selectingsTable.Values; } }
+
+		#endregion
+
+		protected Multiton()
+			:base()
+		{
+		}
+
+		/// <summary>
+		/// Выдача значения по ключу
+		/// </summary>
+		/// <param name="key">ключ</param>
+		public TSelectable Get(object key)
+		{
+			return (TSelectable)this.selectingsTable[key];
+		}
+
+		#region [ Selecting - отбор]
+
+		/// <summary>
+		/// Внутренний селектор - с помощью правила формирует ключи и заполняет ими таблицу
+		/// </summary>
+		/// <param name="singleton">объект синглтона</param>
+		private void AddToSelect(TSelectable singleton)
+		{
+			var keysEnumerator = SelectRule.GetKeys(singleton);
 			if (keysEnumerator != null)
 			{
 				var keyNumerator = keysEnumerator.GetEnumerator();
 				if (keyNumerator.MoveNext())
 				{
-					Hashtable instansTable = InstanceTable;
-					lock (instansTable.SyncRoot)
-					{
+					lock (this.selectingsTable.SyncRoot)
 						do
 						{
-							instansTable.Add(keyNumerator.Current, this);
+							this.selectingsTable.Add(keyNumerator.Current, singleton);
 						} while (keyNumerator.MoveNext());
-					}
 				}
 			}
 		}
 
-		public static Multiton<TSelector> Get(object key)
+		/// <summary>
+		/// 'вешаемый' селектор - фильтрует по типу и передает внутреннему [TSelectable]
+		/// </summary>
+		/// <param name="singleton">объект синглтона</param>
+		private void AddToSelect(Singleton singleton)
 		{
-			return InstanceTable[key] as Multiton<TSelector>;
+			if (singleton is TSelectable)
+				this.AddToSelect(singleton as TSelectable);
 		}
-		
+
 		/// <summary>
-		/// Gets the init keys.
+		/// Постинициализация
 		/// </summary>
-		/// <value>The init types.</value>
-		public static ICollection InitKeys { get { return InstanceTable.Keys; } } 
-		
-		/// <summary>
-		/// Gets the init objects.
-		/// </summary>
-		/// <value>The init objects.</value>
-		public new static ICollection InitObjects { get { return InstanceTable.Values; } }
+		/// <remarks>'вешаем' наш селектор</remarks>
+		protected override void DoAfterInitialize()
+		{
+			// Вызываем базовую постинициализацию
+			base.DoAfterInitialize();
+			// Добавляем селектор текущего типа
+			base.AddSelectorsAdd(this.AddToSelect);
+		}
+
+		#endregion
 
 		#region ISourceProvider implementation
 		
 		ISourceProvider ISourceProvider.Get(object key)
 		{
-			return Get(key);
+			return this.Get(key);
 		}
 		
 		#endregion
 	}
+	
 }
 

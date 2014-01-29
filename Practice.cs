@@ -36,7 +36,7 @@ namespace Leleko.CSharp.Patterns
 	/// <summary>
 	/// Задает принципы инициализации сторонних синглтонов при инициализации онного
 	/// </summary>
-	[AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
+	[AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
 	public sealed class SingletonInitAttribute: Attribute
 	{
 		/// <summary>
@@ -54,11 +54,11 @@ namespace Leleko.CSharp.Patterns
 	/// Позволяет задавать ключ для SelectorAttribute при инициализации синглтонов
 	/// </summary>
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
-	public class SingletonKeyAttribute: Attribute
+	public class MultitonKeyAttribute: Attribute
 	{
 		public object Key { get; private set; }
 		
-		public SingletonKeyAttribute(object key)
+		public MultitonKeyAttribute(object key)
 		{
 			this.Key = key;
 		}

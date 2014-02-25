@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 
+using System.Threading;
+
 namespace Leleko.CSharp.Patterns
 {
     /* Паттерн - Singleton */
@@ -10,30 +12,9 @@ namespace Leleko.CSharp.Patterns
     /// <summary>
     /// Singleton (одиночка) - объект с единственным экземпляром типа на приложение
     /// </summary>
-    public abstract class Singleton: Object, ISourceProvider
+    public abstract partial class Singleton: Object, ISourceProvider, IEquatable<Singleton>
     {
-        /// <summary>
-        /// Экземпляр синглтона
-        /// </summary>
-        /// <typeparam name="TSingleton">тип синглтона</typeparam>
-        public static class Instance<TSingleton>
-            where TSingleton : Singleton
-        {
-            /// <summary>
-            /// Экземпляр синглтона 
-            /// <remarks>не возвращает экземпляров SingletonThread, для этого используйте SingletonThread.Instance[TSingleton].Value</remarks>
-            /// </summary>
-            public static readonly TSingleton Value;
-
-			/// <summary>
-			/// Инициализация поля
-			/// </summary>
-			static Instance()
-			{
-				Value = (TSingleton)GetInstance(typeof(TSingleton));
-			}
-        }
-
+		/*
 		/// <summary>
 		/// Ассоциированный синглтон с интерфейсом
 		/// </summary>
@@ -43,6 +24,24 @@ namespace Leleko.CSharp.Patterns
 		{
 			public static Singleton Value { get; internal set; }
 		}
+
+		#region [ Association - регистрация ассоциации ]
+
+		static void RegisterAssociationInternal<TClass>(Singleton singleton)
+			where TClass: class 
+		{
+			Association<TClass>.Value = singleton;
+		}
+
+		static readonly MethodInfo RegisterAssociationInternalMi = typeof(Singleton).GetMethod("RegisterAssociationInternal", BindingFlags.Static | BindingFlags.NonPublic );
+
+		static void RegisterAssociation(Type type, Singleton singleton)
+		{
+			RegisterAssociationInternalMi.MakeGenericMethod(type).Invoke(null, new object[] { singleton });
+		}
+
+		#endregion
+		*/
 
 		#region [ Static ]
 
@@ -63,13 +62,16 @@ namespace Leleko.CSharp.Patterns
 				throw new ArgumentNullException("singletonType");
 			
 			Hashtable instansTable = InstanceTable;
-			Singleton singleton = (Singleton)instansTable[singletonType];
-			if (singleton != null)
-				return singleton;
-			if (singletonType.IsSubclassOf(typeof(Singleton)))
-				return (Singleton)(Activator.CreateInstance(singletonType, true));
-			else
-				throw new ArgumentException("Запрашиваемый тип должен быть производным от Singleton", singletonType.FullName);
+			lock(instansTable.SyncRoot)
+			{
+				Singleton singleton = (Singleton)instansTable[singletonType];
+				if (singleton != null)
+					return singleton;
+				if (singletonType.IsSubclassOf(typeof(Singleton)))
+					return (Singleton)(Activator.CreateInstance(singletonType, true));
+				else
+					throw new ArgumentException("Запрашиваемый тип должен быть производным от Singleton", singletonType.FullName);
+			}
 		}
 
 		/// <summary>
@@ -86,26 +88,7 @@ namespace Leleko.CSharp.Patterns
 
 		#endregion
 
-		#region [ Association - регистрация ассоциации
-
-		static void RegisterAssociationInternal<TClass>(Singleton singleton)
-			where TClass: class 
-		{
-			Association<TClass>.Value = singleton;
-		}
-
-		static readonly MethodInfo RegisterAssociationInternalMi = typeof(Singleton).GetMethod("RegisterAssociationInternal", BindingFlags.Static | BindingFlags.NonPublic );
-
-		static void RegisterAssociation(Type type, Singleton singleton)
-		{
-			RegisterAssociationInternalMi.MakeGenericMethod(type).Invoke(null, new object[] { singleton });
-		}
-
-		#endregion
-
-
-
-		#region [ Selectors ]
+		#region [ Selectors events ]
 
 		/// <summary>
 		/// Добавленные селекторы мн-ва синглтонов
@@ -125,8 +108,7 @@ namespace Leleko.CSharp.Patterns
 			lock (instansTable.SyncRoot)
 			{
 				// добавляем селектор
-				SelectorsAdd += addToSelect;
-
+				Singleton.SelectorsAdd += addToSelect;
 				// перебираем все синглтоны из таблицы
 				foreach(Singleton singleton in instansTable.Values)
 					addToSelect(singleton);
@@ -138,7 +120,7 @@ namespace Leleko.CSharp.Patterns
 		/// <summary>
 		/// Защищенный конструктор
 		/// </summary>
-		protected Singleton()
+		internal protected Singleton()
 		{
 			this.Initialize();
 		}
@@ -150,16 +132,20 @@ namespace Leleko.CSharp.Patterns
 		void Initialize()
 		{
 			Hashtable instansTable = InstanceTable;
-			lock (instansTable.SyncRoot)
+			lock(instansTable.SyncRoot)
 			{
-				// Регистрация экземпляра синглтона в таблице
-				instansTable.Add(this.GetType(), this);
+				try
+				{
+					// Регистрация экземпляра синглтона в таблице
+					instansTable.Add(this.GetType(), this);
+				}
+				catch(ArgumentException ex)
+				{
+					throw new ApplicationException(string.Concat("Класс ",this.GetType().FullName, " является Singleton'ом и поэтому не может иметь более 1го экземпляра в рамках одного приложения. Рекомендуется сделать конструктор класса закрытым а для запроса экземпляра использовать Singleton.Instance<TSingleton>.Value."),ex);
+				}
 			}
 			// Инициализация указанных синглтонов
 			Attribute.GetCustomAttributes(this.GetType(), typeof(SingletonInitAttribute));
-			// Инициализация указанных 
-			foreach (SingletonAssociationAttribute attribute in Attribute.GetCustomAttributes(this.GetType(), typeof(SingletonAssociationAttribute)))
-				RegisterAssociation(attribute.ClassType, this);
 
 			// Уведомление селекторов о появлении нового синглтона
 			if (SelectorsAdd != null)
@@ -171,46 +157,22 @@ namespace Leleko.CSharp.Patterns
 		/// <summary>
 		/// Постинициализатор
 		/// </summary>
-		protected virtual void DoAfterInitialize()
-		{
-		}
+		protected virtual void DoAfterInitialize() { }
 		
 		/// <summary>
 		/// Получение хэш-кода экземпляра
 		/// </summary>
 		/// <returns>хэш-код</returns>
-		public override int GetHashCode()
-		{
-			// Поскольку экземпляр является единственным представителем типа, то логично что и HashCode у него как у его типа
-			return this.GetType().GetHashCode();
-		}
+		public override int GetHashCode() { return this.GetType().GetHashCode(); } // Поскольку экземпляр является единственным представителем типа, то логично что и HashCode у него как у его типа
 
-		#region [ Nested types ]
+		#region IEquatable implementation
 
-		public abstract class Rule: Singleton
-		{
-			public class SelectRule: Rule
-			{
-				public virtual IEnumerable GetKeys(Singleton singleton)
-				{
-					if (singleton == null)
-						return null;
-					
-					var attributes = Attribute.GetCustomAttributes(singleton.GetType(),typeof(MultitonKeyAttribute),false);
-					object[] keys = new object[attributes.Length];
-					for (int i = 0; i < keys.Length; i++)
-						keys[i] = ((MultitonKeyAttribute)attributes[i]).Key;
-					return keys;
-				}
-			}
-		}
-		
+		public bool Equals(Singleton other) { return object.ReferenceEquals(this,other); }
 
-		
 		#endregion
 
 		#region ISourceProvider implementation
-
+		
 		ISourceProvider ISourceProvider.Get(object key)
 		{
 			if ((key is Type) && (key as Type).IsSubclassOf(typeof(Singleton)))
@@ -218,17 +180,7 @@ namespace Leleko.CSharp.Patterns
 			return null;
 		}
 
-		#endregion
-
-		#region ISource implementation
-
-		object ISource.Value
-		{
-			get
-			{
-				return this;
-			}
-		}
+		object ISource.Value { get { return this; } }
 
 		#endregion
     }

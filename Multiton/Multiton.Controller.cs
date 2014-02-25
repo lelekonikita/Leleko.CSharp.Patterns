@@ -9,7 +9,6 @@ namespace Leleko.CSharp.Patterns
 {
 	/* Паттерн - Мультитон */
 	/* Каждому типу мультитона - свой единственный, глобальный и неповторимый контроллер(синглтон)*/ 
-	
 
 	/// <summary>
 	/// Multiton.IController - интерфейс контроллера мультитона
@@ -31,6 +30,11 @@ namespace Leleko.CSharp.Patterns
 	
 	public partial class Multiton<TKey>
 	{
+		interface IController: IMultitonController
+		{
+			Multiton<TKey> GetInstance(TKey key);
+		}
+
 		public abstract class Controller : Singleton
 		{
 
@@ -39,37 +43,25 @@ namespace Leleko.CSharp.Patterns
 		/// <summary>
 		/// The controller class
 		/// </summary>
-		public sealed class Controller<TMultiton> : Controller, IDictionary<TKey, TMultiton>, IMultitonController, ISourceProvider, ISource
+		public sealed class Controller<TMultiton> : Controller, IDictionary<TKey, TMultiton>, IController
 			where TMultiton: Multiton<TKey>
 		{
 			/// <summary>
 			/// Конструктор мультитона
 			/// </summary>
-			readonly Converter<TKey, TMultiton> MultitonCtor;
+			readonly Converter<TKey, Multiton<TKey>> MultitonCtor;
 			
 			/// <summary>
 			/// Таблица экземпляров мультитонов
 			/// </summary>
 			readonly Dictionary<TKey, TMultiton> InstanceTable = new Dictionary<TKey, TMultiton>();
 			
-			internal Controller() : base() 
+			public Controller() : base() 
 			{ 
 				// инициализируем точку быстрого доступа к конструкторам
 				// посредством динамического метода
 				
-				var parametersTypes =  new Type[] { typeof(TKey) };
-				
-				var constructorInfo = typeof(TMultiton).GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, parametersTypes, null);
-				if (constructorInfo == null)
-					throw new NotSupportedException(string.Concat("constructor '",typeof(TMultiton).FullName,"(",typeof(TKey).FullName,")' not found"));
-				
-				DynamicMethod dynamicMethod = new DynamicMethod(string.Concat(typeof(TMultiton).FullName, constructorInfo.Name), typeof(TMultiton), parametersTypes, true);
-				var il = dynamicMethod.GetILGenerator();
-				il.Emit(OpCodes.Ldarg_0);
-				il.Emit(OpCodes.Newobj, constructorInfo);
-				il.Emit(OpCodes.Ret);
-				
-				this.MultitonCtor = dynamicMethod.CreateDelegate(typeof(Converter<TKey, TMultiton>)) as Converter<TKey, TMultiton>;
+				this.MultitonCtor = Ctor.GetCtor(typeof(TMultiton));
 			}
 
 			/// <summary>
@@ -104,14 +96,19 @@ namespace Leleko.CSharp.Patterns
 			/// Get the instance by key
 			/// </summary>
 			/// <param name="key">Key.</param>
-			public TMultiton Get(TKey key)
+			public TMultiton GetInstance(TKey key)
 			{
 				TMultiton value;
 				var instanceTable = InstanceTable;
 				if (instanceTable.TryGetValue(key, out value))
 					return value;
-				else return this.MultitonCtor(key);
+				else 
+					return (TMultiton)this.MultitonCtor(key);
 			}
+
+			#region IController implementation
+			Multiton<TKey> IController.GetInstance(TKey key) { return this.GetInstance(key); }
+			#endregion
 
 			#region IDictionary implementation
 
@@ -119,11 +116,21 @@ namespace Leleko.CSharp.Patterns
 
 			bool IDictionary<TKey, TMultiton>.ContainsKey(TKey key) { throw new NotImplementedException(); }
 
-			bool IDictionary<TKey, TMultiton>.Remove(TKey key) { throw new NotImplementedException(); }
+			public bool Remove(TKey key) 
+			{ 
+				TMultiton value;
+				var instanceTable = InstanceTable;
+				lock ((instanceTable as IDictionary).SyncRoot)
+				{
+					if (instanceTable.TryGetValue(key, out value))
+						return value.isRemoved = instanceTable.Remove(key);
+				}
+				return false;
+			}
 
 			bool IDictionary<TKey, TMultiton>.TryGetValue(TKey key, out TMultiton value) { throw new NotImplementedException(); }
 
-			TMultiton IDictionary<TKey, TMultiton>.this[TKey key] { get { return this.Get(key); } set { throw new NotImplementedException(); } }
+			TMultiton IDictionary<TKey, TMultiton>.this[TKey key] { get { return this.GetInstance(key); } set { throw new NotImplementedException(); } }
 
 			public ICollection<TKey> Keys { get { return this.InstanceTable.Keys; } }
 
@@ -150,15 +157,11 @@ namespace Leleko.CSharp.Patterns
 			#endregion
 
 			#region IEnumerable implementation
-
 			IEnumerator<KeyValuePair<TKey, TMultiton>> IEnumerable<KeyValuePair<TKey, TMultiton>>.GetEnumerator() { return this.InstanceTable.GetEnumerator(); }
-
 			#endregion
 
 			#region IEnumerable implementation
-
 			IEnumerator IEnumerable.GetEnumerator() { return this.InstanceTable.GetEnumerator(); }
-
 			#endregion
 		}
 
@@ -174,7 +177,7 @@ namespace Leleko.CSharp.Patterns
 			/// <param name="singleton">Singleton.</param>
 			public override IEnumerable<Type> GetKeys(Singleton singleton)
 			{
-				yield return (singleton as IMultitonController).MultitonType;
+				yield return ((IMultitonController)singleton).MultitonType;
 			}
 		}
 	}

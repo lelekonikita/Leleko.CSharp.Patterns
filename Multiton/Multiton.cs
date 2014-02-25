@@ -13,29 +13,47 @@ namespace Leleko.CSharp.Patterns
 	/// </summary>
 	public abstract partial class Multiton<TKey>
 	{
+
+
 		/// <summary>
 		/// Отобранные контроллеры с ключем по типу контролируемого мультитона
 		/// </summary>
-		protected static readonly IDictionary<Type,Multiton<TKey>.Controller> ControllersTable;
+		protected static readonly IDictionary<Type,Multiton<TKey>.Controller> ControllerTable;
 
 		/// <summary>
 		/// Initializes the <see cref="Leleko.CSharp.Patterns.Multiton`1"/> class.
 		/// </summary>
 		static Multiton()
 		{
-			ControllersTable = Singleton.Selector<ControllerSelectRule,Type,Multiton<TKey>.Controller>.Value;
+			ControllerTable = Singleton.Selector<ControllerSelectRule,Type,Multiton<TKey>.Controller>.Value;
 		}
 		 
 		/// <summary>
 		/// The key.
 		/// </summary>
-		public readonly TKey key;
+		readonly TKey key;
+
+		/// <summary>
+		/// Объект был удален
+		/// </summary>
+		bool isRemoved;
 
 		/// <summary>
 		/// Gets the key.
 		/// </summary>
 		/// <value>The key.</value>
 		public TKey Key { get { return this.key; } }
+
+		/// <summary>
+		/// Gets a value indicating whether this instance is removed.
+		/// </summary>
+		/// <value><c>true</c> if this instance is removed; otherwise, <c>false</c>.</value>
+		public bool IsRemoved { get { return this.isRemoved; } }
+
+		public static Multiton<TKey> GetInstance(Type multitonType, TKey key)
+		{
+			return Ctor.GetCtor(multitonType)(key);
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Leleko.CSharp.Patterns.Multiton`1"/> class.
@@ -55,7 +73,7 @@ namespace Leleko.CSharp.Patterns
 			Type thisType = this.GetType();
 			Controller controller;
 
-			if (ControllersTable.TryGetValue(thisType, out controller)) // если контроллер существует - берем его и регистрируем мультитон
+			if (ControllerTable.TryGetValue(thisType, out controller)) // если контроллер существует - берем его и регистрируем мультитон
 				(controller as IMultitonController).RegistrateMultiton(this);
 			else
 			{
@@ -64,9 +82,13 @@ namespace Leleko.CSharp.Patterns
 			}
 		}
 
+		/// <summary>
+		/// Returns a <see cref="System.String"/> that represents the current <see cref="Leleko.CSharp.Patterns.Multiton`1"/>.
+		/// </summary>
+		/// <returns>A <see cref="System.String"/> that represents the current <see cref="Leleko.CSharp.Patterns.Multiton`1"/>.</returns>
 		public override string ToString()
 		{
-			return string.Format("[Multiton<{1}>: Key={0}]", Key, this.GetType().Name);
+			return string.Format("[Multiton<{0}>: Key={1}, Removed={2}]", this.GetType().Name, Key, IsRemoved);
 		}
 	}
 }

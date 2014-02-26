@@ -49,16 +49,18 @@ namespace Leleko.CSharp.Patterns
 				var parametersTypes =  new Type[] { typeof(TKey) };
 				
 				var constructorInfo = multitonType.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, parametersTypes, null);
-				if (constructorInfo == null)
+				if (constructorInfo != null)
+				{
+					DynamicMethod dynamicMethod = new DynamicMethod(string.Concat(multitonType.Name, constructorInfo.Name), multitonType, parametersTypes, true);
+					var il = dynamicMethod.GetILGenerator();
+					il.Emit(OpCodes.Ldarg_0);
+					il.Emit(OpCodes.Newobj, constructorInfo);
+					il.Emit(OpCodes.Ret);
+					
+					return dynamicMethod.CreateDelegate(typeof(Converter<TKey, Multiton<TKey>>)) as Converter<TKey, Multiton<TKey>>;
+				}
+				else 
 					throw new NotSupportedException(string.Concat("Конструктор '",multitonType.Name,"(",typeof(TKey).Name,")' не найден, Multiton-производный тип должен иметь скрытый конструктор вида ..ctor(TKey key)"));
-				
-				DynamicMethod dynamicMethod = new DynamicMethod(string.Concat(multitonType.Name, constructorInfo.Name), multitonType, parametersTypes, true);
-				var il = dynamicMethod.GetILGenerator();
-				il.Emit(OpCodes.Ldarg_0);
-				il.Emit(OpCodes.Newobj, constructorInfo);
-				il.Emit(OpCodes.Ret);
-				
-				return dynamicMethod.CreateDelegate(typeof(Converter<TKey, Multiton<TKey>>)) as Converter<TKey, Multiton<TKey>>;
 			}
 		}
 	}

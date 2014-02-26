@@ -13,8 +13,6 @@ namespace Leleko.CSharp.Patterns
 	/// </summary>
 	public abstract partial class Multiton<TKey>
 	{
-
-
 		/// <summary>
 		/// Отобранные контроллеры с ключем по типу контролируемого мультитона
 		/// </summary>
@@ -26,6 +24,17 @@ namespace Leleko.CSharp.Patterns
 		static Multiton()
 		{
 			ControllerTable = Singleton.Selector<ControllerSelectRule,Type,Multiton<TKey>.Controller>.Value;
+		}
+
+		/// <summary>
+		/// Gets the instance of multiton with current key.
+		/// </summary>
+		/// <returns>The instance.</returns>
+		/// <param name="multitonType">Multiton type.</param>
+		/// <param name="key">Key.</param>
+		public static Multiton<TKey> GetInstance(Type multitonType, TKey key)
+		{
+			return Ctor.GetCtor(multitonType)(key);
 		}
 		 
 		/// <summary>
@@ -50,11 +59,6 @@ namespace Leleko.CSharp.Patterns
 		/// <value><c>true</c> if this instance is removed; otherwise, <c>false</c>.</value>
 		public bool IsRemoved { get { return this.isRemoved; } }
 
-		public static Multiton<TKey> GetInstance(Type multitonType, TKey key)
-		{
-			return Ctor.GetCtor(multitonType)(key);
-		}
-
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Leleko.CSharp.Patterns.Multiton`1"/> class.
 		/// </summary>
@@ -76,10 +80,7 @@ namespace Leleko.CSharp.Patterns
 			if (ControllerTable.TryGetValue(thisType, out controller)) // если контроллер существует - берем его и регистрируем мультитон
 				(controller as IMultitonController).RegistrateMultiton(this);
 			else
-			{
-				// если контроллер не существует - пробираемся по иерархии наследования аж до типа Multiton<TKey> чтобы определить тип ключа
 				(Singleton.GetInstance(typeof(Controller<>).MakeGenericType(new Type[] { typeof(TKey), thisType })) as IMultitonController).RegistrateMultiton(this);
-			}
 		}
 
 		/// <summary>
@@ -88,7 +89,7 @@ namespace Leleko.CSharp.Patterns
 		/// <returns>A <see cref="System.String"/> that represents the current <see cref="Leleko.CSharp.Patterns.Multiton`1"/>.</returns>
 		public override string ToString()
 		{
-			return string.Format("[Multiton<{0}>: Key={1}, Removed={2}]", this.GetType().Name, Key, IsRemoved);
+			return string.Format("[Multiton<{0}<{1}>>: Key={2}, Removed={3}]", this.GetType().Name, typeof(TKey).Name, this.Key, this.IsRemoved);
 		}
 	}
 }

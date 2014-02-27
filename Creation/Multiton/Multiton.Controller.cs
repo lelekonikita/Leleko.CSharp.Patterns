@@ -25,16 +25,11 @@ namespace Leleko.CSharp.Patterns.Creation
 		/// Registerate the multiton.
 		/// </summary>
 		/// <param name="multiton">Multiton.</param>
-		void RegistrateMultiton(object multiton);
+		 void RegistrateMultiton(object multiton);
 	}
 	
 	public abstract partial class Multiton<TKey>
 	{
-		interface IController: IMultitonController
-		{
-			Multiton<TKey> GetInstance(TKey key);
-		}
-
 		public abstract class Controller : Singleton
 		{
 
@@ -43,7 +38,7 @@ namespace Leleko.CSharp.Patterns.Creation
 		/// <summary>
 		/// The controller class
 		/// </summary>
-		public sealed class Controller<TMultiton> : Controller, IDictionary<TKey, TMultiton>, IController
+		public sealed class Controller<TMultiton> : Controller, IDictionary<TKey, TMultiton>, IMultitonController
 			where TMultiton: Multiton<TKey>
 		{
 			/// <summary>
@@ -62,6 +57,8 @@ namespace Leleko.CSharp.Patterns.Creation
 				// посредством динамического метода
 				
 				this.MultitonCtor = Ctor.GetCtor(typeof(TMultiton));
+
+				ControllerTable.Add(typeof(TMultiton), this);
 			}
 
 			/// <summary>
@@ -105,10 +102,6 @@ namespace Leleko.CSharp.Patterns.Creation
 				else 
 					return (TMultiton)this.MultitonCtor(key);
 			}
-
-			#region IController implementation
-			Multiton<TKey> IController.GetInstance(TKey key) { return this.GetInstance(key); }
-			#endregion
 
 			#region IDictionary implementation
 
@@ -191,6 +184,7 @@ namespace Leleko.CSharp.Patterns.Creation
 			#endregion
 		}
 
+		/*
 		/// <summary>
 		/// Rule for selection controllers by multiton types
 		/// </summary>
@@ -201,6 +195,7 @@ namespace Leleko.CSharp.Patterns.Creation
 				return new KeyValuePair<Type, Multiton<TKey>.Controller>[] { new KeyValuePair<Type, Multiton<TKey>.Controller>(((IMultitonController)singleton).MultitonType, singleton) };
 			}
 		}
+		*/
 	}
 }
 

@@ -35,14 +35,14 @@ namespace Leleko.CSharp.Patterns.Creation
 		/// <summary>
 		/// Отобранные контроллеры с ключем по типу контролируемого мультитона
 		/// </summary>
-		protected static readonly IDictionary<Type,Multiton<TKey>.Controller> ControllerTable;
+		protected static readonly Dictionary<Type, Controller> ControllerTable;
 
 		/// <summary>
 		/// Initializes the <see cref="Leleko.CSharp.Patterns.Multiton`1"/> class.
 		/// </summary>
 		static Multiton()
 		{
-			ControllerTable = Singleton.Selector<ControllerSelectRule,Type,Multiton<TKey>.Controller, Multiton<TKey>.Controller>.Value;
+			ControllerTable = new Dictionary<Type, Controller>();
 		}
 
 		/// <summary>

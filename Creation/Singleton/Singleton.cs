@@ -5,14 +5,14 @@ using System.Reflection;
 
 using System.Threading;
 
-namespace Leleko.CSharp.Patterns
+namespace Leleko.CSharp.Patterns.Creation
 {
     /* Паттерн - Singleton */
 	
     /// <summary>
     /// Singleton (одиночка) - объект с единственным экземпляром типа на приложение
     /// </summary>
-    public abstract partial class Singleton: Object, ISourceProvider, IEquatable<Singleton>
+    public abstract partial class Singleton: Object, ICloneable, IEquatable<Singleton>
     {
 		/*
 		/// <summary>
@@ -144,8 +144,6 @@ namespace Leleko.CSharp.Patterns
 					throw new ApplicationException(string.Concat("Класс ",this.GetType().FullName, " является Singleton'ом и поэтому не может иметь более 1го экземпляра в рамках одного приложения. Рекомендуется сделать конструктор класса закрытым а для запроса экземпляра использовать Singleton.Instance<TSingleton>.Value."),ex);
 				}
 			}
-			// Инициализация указанных синглтонов
-			Attribute.GetCustomAttributes(this.GetType(), typeof(SingletonInitAttribute));
 
 			// Уведомление селекторов о появлении нового синглтона
 			if (SelectorsAdd != null)
@@ -171,16 +169,15 @@ namespace Leleko.CSharp.Patterns
 
 		#endregion
 
-		#region ISourceProvider implementation
-		
-		ISourceProvider ISourceProvider.Get(object key)
-		{
-			if ((key is Type) && (key as Type).IsSubclassOf(typeof(Singleton)))
-				return GetInstance(key as Type);
-			return null;
-		}
+		#region ICloneable implementation
 
-		object ISource.Value { get { return this; } }
+		/// <summary>
+		/// Clone this instance.
+		/// </summary>
+		object ICloneable.Clone()
+		{
+			return this;
+		}
 
 		#endregion
     }

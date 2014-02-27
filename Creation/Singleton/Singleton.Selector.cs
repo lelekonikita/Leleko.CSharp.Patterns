@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections;
 
-namespace Leleko.CSharp.Patterns
+namespace Leleko.CSharp.Patterns.Creation
 {
 	/* Паттерн - Singleton 
 	 * Селектор - Selector - позволяет организовать отбор синглтонов по ключам, формируемым правилами
@@ -16,8 +16,8 @@ namespace Leleko.CSharp.Patterns
 		/// <summary>
 		/// Selector (отборщик) - отбирает синглтоны в соответсвии с правилом отбора
 		/// </summary>
-		public sealed class Selector<TSelectRule,TKey,TSingleton>: Singleton, IDictionary<TKey, TSingleton>, ISourceProvider
-			where TSelectRule: Singleton.Rules.SelectRule<TKey>
+		public sealed class Selector<TSelectRule, TKey, TValue, TSingleton>: Singleton, IDictionary<TKey, TValue>
+			where TSelectRule: Singleton.Rules.SelectRule<TKey, TValue, TSingleton>
 			where TSingleton: Singleton
 		{
 			#region [ Self Instance - сам себя, ведь он синглтон ]
@@ -25,7 +25,7 @@ namespace Leleko.CSharp.Patterns
 			/// <summary>
 			/// Инстанс себя
 			/// </summary>
-			public static readonly Selector<TSelectRule, TKey, TSingleton> Value;
+			public static readonly Selector<TSelectRule, TKey, TValue, TSingleton> Value;
 
 			/// <summary>
 			/// управляющий правилом добавления синглтонов
@@ -38,37 +38,37 @@ namespace Leleko.CSharp.Patterns
 			static Selector()
 			{
 				SelectRule = Singleton.Instance<TSelectRule>.Value;
-				Value = Singleton.Instance<Selector<TSelectRule, TKey, TSingleton>>.Value;
+				Value = Singleton.Instance<Selector<TSelectRule, TKey, TValue, TSingleton>>.Value;
 			}
 
 			#endregion
 
-			internal Selector() :base() { }
+			protected Selector() :base() { }
 
 			#region [ Dictionary ]
 
 			/// <summary>
 			/// таблица отобранных
 			/// </summary>
-			readonly Dictionary<TKey, TSingleton> selectingsTable = new Dictionary<TKey, TSingleton>();
+			readonly Dictionary<TKey, TValue> selectingTable = new Dictionary<TKey, TValue>();
 
 			/// <summary>
 			/// коллекция ключей
 			/// </summary>
 			/// <value>The keys.</value>
-			public ICollection<TKey> Keys { get { return this.selectingsTable.Keys; } }
+			public ICollection<TKey> Keys { get { return this.selectingTable.Keys; } }
 
 			/// <summary>
 			/// коллекция значений
 			/// </summary>
 			/// <value>The values.</value>
-			public ICollection<TSingleton> Values { get { return this.selectingsTable.Values; } }
+			public ICollection<TValue> Values { get { return this.selectingTable.Values; } }
 
 			/// <summary>
 			/// get singleton по ключу
 			/// </summary>
 			/// <param name="key">значение ключа</param>
-			public TSingleton this[TKey key] { get { return this.selectingsTable[key] ; } }
+			public TValue this[TKey key] { get { return this.selectingTable[key] ; } }
 
 			#endregion
 
@@ -80,19 +80,18 @@ namespace Leleko.CSharp.Patterns
 			/// <param name="singleton">объект синглтона</param>
 			private void AddToSelect(TSingleton singleton)
 			{
-				var keysEnumerable = SelectRule.GetKeys(singleton);
-				if (keysEnumerable != null)
+				var enumerable = SelectRule.Select(singleton);
+				if (enumerable != null)
 				{
-					var keyNumerator = keysEnumerable.GetEnumerator();
-					if (keyNumerator.MoveNext())
+					var enumerator = enumerable.GetEnumerator();
+					if (enumerator.MoveNext())
 					{
-						lock ((this.selectingsTable as ICollection).SyncRoot)
+						lock ((this.selectingTable as ICollection).SyncRoot)
 						do
 						{
-							var key = keyNumerator.Current;
-							if (key != null)
-								this.selectingsTable.Add(key, singleton);
-						} while (keyNumerator.MoveNext());
+							var current = enumerator.Current;
+							this.selectingTable.Add(current.Key, current.Value);
+						} while (enumerator.MoveNext());
 					}
 				}
 			}
@@ -119,17 +118,17 @@ namespace Leleko.CSharp.Patterns
 
 			#region IDictionary implementation
 
-			void IDictionary<TKey, TSingleton>.Add(TKey key, TSingleton value) { throw new NotImplementedException(); }
+			void IDictionary<TKey, TValue>.Add(TKey key, TValue value) { throw new NotImplementedException(); }
 
-			public bool ContainsKey(TKey key) { return this.selectingsTable.ContainsKey(key); }
+			public bool ContainsKey(TKey key) { return this.selectingTable.ContainsKey(key); }
 
-			bool IDictionary<TKey, TSingleton>.Remove(TKey key) { throw new NotImplementedException(); }
+			bool IDictionary<TKey, TValue>.Remove(TKey key) { throw new NotImplementedException(); }
 
-			public bool TryGetValue(TKey key, out TSingleton value) { return this.selectingsTable.TryGetValue(key, out value); }
+			public bool TryGetValue(TKey key, out TValue value) { return this.selectingTable.TryGetValue(key, out value); }
 
-			TSingleton IDictionary<TKey, TSingleton>.this[TKey key] 
+			TValue IDictionary<TKey, TValue>.this[TKey key] 
 			{ 
-				get { return this.selectingsTable[key] ; }
+				get { return this.selectingTable[key] ; }
 				set { throw new NotImplementedException(); }
 			}
 
@@ -137,52 +136,40 @@ namespace Leleko.CSharp.Patterns
 
 			#region ICollection implementation
 
-			void ICollection<KeyValuePair<TKey, TSingleton>>.Add(KeyValuePair<TKey, TSingleton> item) { (this as IDictionary<TKey, TSingleton>).Add(item.Key, item.Value); }
+			void ICollection<KeyValuePair<TKey, TValue>>.Add(KeyValuePair<TKey, TValue> item) { (this as IDictionary<TKey, TValue>).Add(item.Key, item.Value); }
 
-			void ICollection<KeyValuePair<TKey, TSingleton>>.Clear() { throw new NotImplementedException(); }
+			void ICollection<KeyValuePair<TKey, TValue>>.Clear() { throw new NotImplementedException(); }
 
-			bool ICollection<KeyValuePair<TKey, TSingleton>>.Contains(KeyValuePair<TKey, TSingleton> item)
+			bool ICollection<KeyValuePair<TKey, TValue>>.Contains(KeyValuePair<TKey, TValue> item)
 			{
-				TSingleton value;
-				return this.selectingsTable.TryGetValue(item.Key, out value) && EqualityComparer<TSingleton>.Default.Equals(value,item.Value);
+				TValue value;
+				return this.selectingTable.TryGetValue(item.Key, out value) && EqualityComparer<TValue>.Default.Equals(value,item.Value);
 			}
 
-			void ICollection<KeyValuePair<TKey, TSingleton>>.CopyTo(KeyValuePair<TKey, TSingleton>[] array, int arrayIndex)
+			void ICollection<KeyValuePair<TKey, TValue>>.CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
 			{
 				if (array == null)
 					throw new ArgumentNullException("array");
-				foreach(var e in this.selectingsTable)
+				foreach(var e in this.selectingTable)
 					array[arrayIndex++] = e;
 			}
 
-			bool ICollection<KeyValuePair<TKey, TSingleton>>.Remove(KeyValuePair<TKey, TSingleton> item) { throw new NotImplementedException(); }
+			bool ICollection<KeyValuePair<TKey, TValue>>.Remove(KeyValuePair<TKey, TValue> item) { throw new NotImplementedException(); }
 
-			public int Count { get { return this.selectingsTable.Count; } }
+			public int Count { get { return this.selectingTable.Count; } }
 
-			bool ICollection<KeyValuePair<TKey, TSingleton>>.IsReadOnly { get { return true; } }
+			bool ICollection<KeyValuePair<TKey, TValue>>.IsReadOnly { get { return true; } }
 
 			#endregion
 
 			#region IEnumerable implementation
 
-			IEnumerator<KeyValuePair<TKey, TSingleton>> IEnumerable<KeyValuePair<TKey, TSingleton>>.GetEnumerator() { return this.selectingsTable.GetEnumerator(); }
+			IEnumerator<KeyValuePair<TKey, TValue>> IEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator() { return this.selectingTable.GetEnumerator(); }
 
-			IEnumerator IEnumerable.GetEnumerator() { return this.selectingsTable.GetEnumerator(); }
+			IEnumerator IEnumerable.GetEnumerator() { return this.selectingTable.GetEnumerator(); }
 
 			#endregion
 
-			#region ISourceProvider implementation
-			
-			ISourceProvider ISourceProvider.Get(object key)
-			{
-				if (key is TKey)
-					return this.selectingsTable[(TKey)key];
-				else if ((key is Type) && (key as Type).IsSubclassOf(typeof(Singleton)))
-					return Singleton.GetInstance(key as Type);
-				return null;
-			}
-			
-			#endregion
 		}
 	}
 	

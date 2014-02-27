@@ -1,6 +1,6 @@
 using System;
 
-namespace Leleko.CSharp.Patterns
+namespace Leleko.CSharp.Patterns.Creation
 {
 	/// <summary>
 	/// Singleton (одиночка) - объект с единственным экземпляром типа на приложение

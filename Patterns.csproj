@@ -34,23 +34,27 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Practice.cs" />
-    <Compile Include="Properties\SingleObjectThread.cs" />
-    <Compile Include="Practice\ISource.cs" />
-    <Compile Include="Singleton\Singleton.cs" />
-    <Compile Include="Singleton\Singleton.Selector.cs" />
-    <Compile Include="Singleton\Singleton.Rules.cs" />
-    <Compile Include="Singleton\Singleton.Instance.cs" />
-    <Compile Include="Singleton\Attributes.cs" />
-    <Compile Include="Prototype\Prototype.cs" />
-    <Compile Include="Multiton\Multiton.cs" />
-    <Compile Include="Multiton\Multiton.Controller.cs" />
-    <Compile Include="Multiton\Multiton.Instance.cs" />
+    <Compile Include="Creation\Multiton\Multiton.cs" />
+    <Compile Include="Creation\Multiton\Multiton.Controller.cs" />
+    <Compile Include="Creation\Multiton\Multiton.Instance.cs" />
+    <Compile Include="Creation\Multiton\Multiton.Ctor.cs" />
+    <Compile Include="Creation\ObjectPool\IPoolable.cs" />
+    <Compile Include="Creation\Singleton\Singleton.cs" />
+    <Compile Include="Creation\Singleton\Singleton.Selector.cs" />
+    <Compile Include="Creation\Singleton\Singleton.Rules.cs" />
+    <Compile Include="Creation\Singleton\Singleton.Instance.cs" />
+    <Compile Include="Action\Clonner.cs" />
+    <Compile Include="Creation\ObjectPool\IObjectPool.cs" />
+    <Compile Include="Creation\ObjectPool\ObjectPool.cs" />
+    <Compile Include="Creation\ObjectPool\Poolable.cs" />
+    <Compile Include="Action\Castor.cs" />
+    <Compile Include="Creation\ObjectPool\Pooler.cs" />
+    <Compile Include="Reflection\Constructor.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <Folder Include="Practice\" />
-    <Folder Include="Prototype\" />
-    <Folder Include="Multiton\" />
+    <Folder Include="Creation\" />
+    <Folder Include="Action\" />
+    <Folder Include="Reflection\" />
   </ItemGroup>
 </Project>

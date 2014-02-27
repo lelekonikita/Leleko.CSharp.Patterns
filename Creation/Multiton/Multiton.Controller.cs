@@ -5,13 +5,13 @@ using System.Reflection;
 using System.Reflection.Emit;
 
 
-namespace Leleko.CSharp.Patterns
+namespace Leleko.CSharp.Patterns.Creation
 {
 	/* Паттерн - Мультитон */
 	/* Каждому типу мультитона - свой единственный, глобальный и неповторимый контроллер(синглтон)*/ 
 
 	/// <summary>
-	/// Multiton.IController - интерфейс контроллера мультитона
+	/// IMultitonController - интерфейс контроллера мультитона
 	/// </summary>
 	interface IMultitonController
 	{
@@ -28,7 +28,7 @@ namespace Leleko.CSharp.Patterns
 		void RegistrateMultiton(object multiton);
 	}
 	
-	public partial class Multiton<TKey>
+	public abstract partial class Multiton<TKey>
 	{
 		interface IController: IMultitonController
 		{
@@ -123,7 +123,8 @@ namespace Leleko.CSharp.Patterns
 				lock ((instanceTable as IDictionary).SyncRoot)
 				{
 					if (instanceTable.TryGetValue(key, out value))
-						return value.isRemoved = instanceTable.Remove(key);
+						lock (value)
+							return value.IsRemoved = instanceTable.Remove(key);
 				}
 				return false;
 			}
@@ -142,42 +143,62 @@ namespace Leleko.CSharp.Patterns
 
 			void ICollection<KeyValuePair<TKey, TMultiton>>.Add(KeyValuePair<TKey, TMultiton> item) { (this as IDictionary<TKey, TMultiton>).Add(item.Key, item.Value); }
 
-			void ICollection<KeyValuePair<TKey, TMultiton>>.Clear() { throw new NotImplementedException(); } 
+			public void Clear() 
+			{ 
+				var instanceTable = InstanceTable;
+				lock ((instanceTable as IDictionary).SyncRoot)
+				{
+					foreach (var value in instanceTable.Values)
+						lock (value)
+							value.IsRemoved = true;
+					instanceTable.Clear();
+				}
+			} 
 
 			bool ICollection<KeyValuePair<TKey, TMultiton>>.Contains(KeyValuePair<TKey, TMultiton> item) { throw new NotImplementedException(); }
 
-			void ICollection<KeyValuePair<TKey, TMultiton>>.CopyTo(KeyValuePair<TKey, TMultiton>[] array, int arrayIndex) { throw new NotImplementedException(); }
+			void ICollection<KeyValuePair<TKey, TMultiton>>.CopyTo(KeyValuePair<TKey, TMultiton>[] array, int arrayIndex) 
+			{ 
+				if (array == null)
+					throw new ArgumentNullException("array");
+				foreach(var e in this.InstanceTable)
+					array[arrayIndex++] = e;
+			}
 
-			bool ICollection<KeyValuePair<TKey, TMultiton>>.Remove(KeyValuePair<TKey, TMultiton> item) { throw new NotImplementedException(); }
+			bool ICollection<KeyValuePair<TKey, TMultiton>>.Remove(KeyValuePair<TKey, TMultiton> item) 
+			{ 
+				if (EqualityComparer<TKey>.Default.Equals(item.Key,item.Value.Key))
+					return this.Remove(item.Key);
+				return false;
+			}
 
 			int ICollection<KeyValuePair<TKey, TMultiton>>.Count { get { return this.InstanceTable.Count; } }
 
-			bool ICollection<KeyValuePair<TKey, TMultiton>>.IsReadOnly { get { return true; } }
+			bool ICollection<KeyValuePair<TKey, TMultiton>>.IsReadOnly { get { return false; } }
 
 			#endregion
 
 			#region IEnumerable implementation
+
 			IEnumerator<KeyValuePair<TKey, TMultiton>> IEnumerable<KeyValuePair<TKey, TMultiton>>.GetEnumerator() { return this.InstanceTable.GetEnumerator(); }
+
 			#endregion
 
 			#region IEnumerable implementation
+
 			IEnumerator IEnumerable.GetEnumerator() { return this.InstanceTable.GetEnumerator(); }
+
 			#endregion
 		}
 
 		/// <summary>
 		/// Rule for selection controllers by multiton types
 		/// </summary>
-		protected internal sealed class ControllerSelectRule: Singleton.Rules.SelectRule<Type>
+		protected internal sealed class ControllerSelectRule: Singleton.Rules.SelectRule<Type, Multiton<TKey>.Controller, Multiton<TKey>.Controller>
 		{
-			/// <summary>
-			/// Gets the keys.
-			/// </summary>
-			/// <returns>The keys.</returns>
-			/// <param name="singleton">Singleton.</param>
-			public override IEnumerable<Type> GetKeys(Singleton singleton)
+			public override IEnumerable<KeyValuePair<Type, Multiton<TKey>.Controller>> Select(Multiton<TKey>.Controller singleton)
 			{
-				yield return ((IMultitonController)singleton).MultitonType;
+				return new KeyValuePair<Type, Multiton<TKey>.Controller>[] { new KeyValuePair<Type, Multiton<TKey>.Controller>(((IMultitonController)singleton).MultitonType, singleton) };
 			}
 		}
 	}

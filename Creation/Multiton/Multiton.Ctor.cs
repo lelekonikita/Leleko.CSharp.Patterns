@@ -4,9 +4,9 @@ using System.Collections;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace Leleko.CSharp.Patterns
+namespace Leleko.CSharp.Patterns.Creation
 {
-	public partial class Multiton<TKey>
+	public abstract partial class Multiton<TKey>
 	{
 		/// Класс отвечающий за конструирование мультитонов
 		private static class Ctor

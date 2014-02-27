@@ -1,8 +1,8 @@
 using System;
 
-namespace Leleko.CSharp.Patterns
+namespace Leleko.CSharp.Patterns.Creation
 {
-	public partial class Multiton<TKey>
+	public abstract partial class Multiton<TKey>
 	{
 		/// <summary>
 		/// Экземпляр контроллера мультитона

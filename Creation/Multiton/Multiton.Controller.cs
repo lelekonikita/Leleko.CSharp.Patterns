@@ -183,19 +183,6 @@ namespace Leleko.CSharp.Patterns.Creation
 
 			#endregion
 		}
-
-		/*
-		/// <summary>
-		/// Rule for selection controllers by multiton types
-		/// </summary>
-		protected internal sealed class ControllerSelectRule: Singleton.Rules.SelectRule<Type, Multiton<TKey>.Controller, Multiton<TKey>.Controller>
-		{
-			public override IEnumerable<KeyValuePair<Type, Multiton<TKey>.Controller>> Select(Multiton<TKey>.Controller singleton)
-			{
-				return new KeyValuePair<Type, Multiton<TKey>.Controller>[] { new KeyValuePair<Type, Multiton<TKey>.Controller>(((IMultitonController)singleton).MultitonType, singleton) };
-			}
-		}
-		*/
 	}
 }
 
